@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>German A1 Flashcards</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-english: #2c3e50;
+            --text-english-ex: #7f8c8d;
+            --border-color: #eee;
+            --shadow-color: rgba(0,0,0,0.1);
+            --btn-audio-bg: #f1c40f;
+            --btn-audio-text: #333;
+            --btn-reveal-bg: #3498db;
+            --btn-reveal-text: white;
+            --btn-wrong-bg: #e74c3c;
+            --btn-wrong-text: white;
+            --btn-correct-bg: #2ecc71;
+            --btn-correct-text: white;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --text-english: #e0e0e0;
+            --text-english-ex: #a0a0a0;
+            --border-color: #404040;
+            --shadow-color: rgba(0,0,0,0.5);
+            --btn-audio-bg: #f39c12;
+            --btn-reveal-bg: #2980b9;
+            --btn-wrong-bg: #c0392b;
+            --btn-correct-bg: #27ae60;
+        }
+
+        body { 
+            font-family: sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background: var(--bg-color); 
+            margin: 0; 
+            color: var(--text-primary);
+            transition: background 0.3s, color 0.3s;
+        }
+        .card { 
+            background: var(--card-bg); 
+            padding: 40px; 
+            border-radius: 15px; 
+            box-shadow: 0 4px 6px var(--shadow-color); 
+            text-align: center; 
+            max-width: 400px; 
+            width: 90%; 
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .german { font-size: 2em; font-weight: bold; margin-bottom: 10px; color: var(--text-primary); }
+        .example { font-style: italic; color: var(--text-secondary); margin-bottom: 20px; font-size: 1.1em; }
+        .answer-area { display: none; border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px; }
+        .english { font-size: 1.5em; color: var(--text-english); font-weight: bold; margin-bottom: 5px; }
+        .english-ex { color: var(--text-english-ex); margin-bottom: 15px; }
+        button { padding: 12px 24px; margin: 5px; cursor: pointer; border: none; border-radius: 8px; font-size: 1em; transition: opacity 0.2s; }
+        button:hover { opacity: 0.9; }
+        .btn-audio { background: var(--btn-audio-bg); color: var(--btn-audio-text); }
+        .btn-reveal { background: var(--btn-reveal-bg); color: var(--btn-reveal-text); width: 100%; margin-top: 10px; }
+        .btn-wrong { background: var(--btn-wrong-bg); color: var(--btn-wrong-text); flex: 1; }
+        .btn-correct { background: var(--btn-correct-bg); color: var(--btn-correct-text); flex: 1; }
+        .actions { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+        
+        /* Loading state */
+        .loading { opacity: 0.5; pointer-events: none; }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
+
+    <div class="card" id="card-container">
+        <div id="german" class="german">Loading...</div>
+        <div id="german-ex" class="example"></div>
+        
+        <button onclick="playAudio()" id="audio-btn" class="btn-audio">🔊 Play Sound</button>
+        
+        <br><br>
+        <button onclick="reveal()" class="btn-reveal" id="reveal-btn">Show Meaning</button>
+        
+        <div id="answer-area" class="answer-area">
+            <div id="english" class="english"></div>
+            <div id="english-ex" class="english-ex"></div>
+            <p>Did you know it?</p>
+            <div class="actions">
+                <button onclick="submit('wrong')" class="btn-wrong">No (Review)</button>
+                <button onclick="submit('correct')" class="btn-correct">Yes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCard = null;
+        const cardContainer = document.getElementById('card-container');
+
+        // Theme Logic
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const btn = document.getElementById('theme-btn');
+            if (theme === 'dark') {
+                btn.innerText = '☀️ Light Mode';
+            } else {
+                btn.innerText = '🌙 Dark Mode';
+            }
+        }
+
+        // Initialize Theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        async function loadCard() {
+            cardContainer.classList.add('loading');
+            try {
+                const res = await fetch('/api/card');
+                const data = await res.json();
+                
+                if (data.error) {
+                    document.getElementById('german').innerText = "No cards available!";
+                    return;
+                }
+
+                currentCard = data;
+                
+                document.getElementById('german').innerText = currentCard.german;
+                document.getElementById('german-ex').innerText = currentCard.german_example || '';
+                document.getElementById('english').innerText = currentCard.english;
+                document.getElementById('english-ex').innerText = currentCard.english_example || '';
+                
+                // Reset UI
+                document.getElementById('answer-area').style.display = 'none';
+                document.getElementById('reveal-btn').style.display = 'inline-block';
+                
+                // Hide audio button if no audio
+                document.getElementById('audio-btn').style.display = currentCard.audio_file ? 'inline-block' : 'none';
+            } catch (e) {
+                console.error(e);
+                document.getElementById('german').innerText = "Error loading card.";
+            } finally {
+                cardContainer.classList.remove('loading');
+            }
+        }
+
+        function playAudio() {
+            if(currentCard && currentCard.audio_file) {
+                const audio = new Audio('/static/audio/' + currentCard.audio_file);
+                audio.play().catch(e => console.log("Audio play failed", e));
+            }
+        }
+
+        function reveal() {
+            document.getElementById('answer-area').style.display = 'block';
+            document.getElementById('reveal-btn').style.display = 'none';
+        }
+
+        async function submit(result) {
+            if (!currentCard) return;
+            
+            cardContainer.classList.add('loading');
+            try {
+                await fetch(`/api/result/${currentCard.id}/${result}`, { method: 'POST' });
+                loadCard();
+            } catch (e) {
+                console.error(e);
+                alert("Failed to submit result");
+                cardContainer.classList.remove('loading');
+            }
+        }
+
+        // Initial load
+        loadCard();
+    </script>
+</body>
+</html>

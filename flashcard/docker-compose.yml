@@ -1,0 +1,9 @@
+services:
+  flashcards:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./audio:/app/audio
+      - "./Goethe Institute A1 Wordlist.txt:/app/Goethe Institute A1 Wordlist.txt"
+      - ./data:/app/data
