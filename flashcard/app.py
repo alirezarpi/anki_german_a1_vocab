@@ -26,6 +26,56 @@ def get_db():
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+@app.get("/stats", response_class=HTMLResponse)
+async def read_stats(request: Request):
+    return templates.TemplateResponse("stats.html", {"request": request})
+
+@app.get("/api/stats")
+def get_stats():
+    conn = get_db()
+    c = conn.cursor()
+    
+    c.execute("SELECT * FROM cards")
+    rows = c.fetchall()
+    conn.close()
+    
+    total = len(rows)
+    known = 0
+    learning = 0
+    new_cards = 0
+    
+    words_list = []
+    
+    for row in rows:
+        box = row['box']
+        next_review = row['next_review_ts']
+        
+        status = 'new'
+        if box > 1:
+            status = 'known'
+            known += 1
+        elif box == 1 and next_review > 0:
+            status = 'learning'
+            learning += 1
+        else:
+            status = 'new'
+            new_cards += 1
+            
+        words_list.append({
+            "id": row['id'],
+            "german": row['german'],
+            "english": row['english'],
+            "status": status
+        })
+        
+    return {
+        "total": total,
+        "known": known,
+        "learning": learning,
+        "new": new_cards,
+        "words": words_list
+    }
+
 @app.get("/api/card")
 def get_card():
     conn = get_db()

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>German A1 Progress</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #eee;
+            --progress-green: #2ecc71;
+            --progress-yellow: #f1c40f;
+            --progress-red: #e74c3c;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: #404040;
+            --progress-green: #27ae60;
+            --progress-yellow: #f39c12;
+            --progress-red: #c0392b;
+        }
+
+        body {
+            font-family: sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; }
+
+        .progress-container {
+            margin: 20px 0;
+            background: #ddd;
+            border-radius: 10px;
+            height: 30px;
+            width: 100%;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .bar {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8em;
+            font-weight: bold;
+            transition: width 0.5s ease-in-out;
+        }
+
+        .bar-green { background: var(--progress-green); }
+        .bar-yellow { background: var(--progress-yellow); color: #333; }
+        .bar-red { background: var(--progress-red); }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th { font-weight: bold; }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+        }
+        .status-known { background: var(--progress-green); }
+        .status-learning { background: var(--progress-red); } /* Red for Failed/Learning */
+        .status-new { background: var(--progress-yellow); color: #333; } /* Yellow for New/Not Learned */
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: bold;
+            border: 1px solid var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
+
+    <div class="container">
+        <a href="/" class="back-btn">← Back to Flashcards</a>
+        <h1>Your Progress</h1>
+
+        <div class="progress-container">
+            <!-- Green: Known -->
+            <div id="bar-green" class="bar bar-green" style="width: 0%">0%</div>
+            <!-- Red: Failed/Learning -->
+            <div id="bar-red" class="bar bar-red" style="width: 0%">0%</div>
+            <!-- Yellow: New/Not Learned -->
+            <div id="bar-yellow" class="bar bar-yellow" style="width: 0%">0%</div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item"><div class="dot" style="background: var(--progress-green)"></div> Known</div>
+            <div class="legend-item"><div class="dot" style="background: var(--progress-red)"></div> Failed/Learning</div>
+            <div class="legend-item"><div class="dot" style="background: var(--progress-yellow)"></div> Not Learned (New)</div>
+        </div>
+
+        <table id="words-table">
+            <thead>
+                <tr>
+                    <th>German</th>
+                    <th>English</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Theme Logic
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const btn = document.getElementById('theme-btn');
+            btn.innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        async function loadStats() {
+            const res = await fetch('/api/stats');
+            const data = await res.json();
+
+            // Update Progress Bar
+            const total = data.total;
+            const greenPct = (data.known / total) * 100;
+            const redPct = (data.learning / total) * 100; // Learning/Failed -> Red
+            const yellowPct = (data.new / total) * 100; // New -> Yellow
+
+            document.getElementById('bar-green').style.width = greenPct + "%";
+            document.getElementById('bar-green').innerText = greenPct > 0 ? Math.round(greenPct) + "%" : "";
+            
+            document.getElementById('bar-red').style.width = redPct + "%";
+            document.getElementById('bar-red').innerText = redPct > 0 ? Math.round(redPct) + "%" : "";
+
+            document.getElementById('bar-yellow').style.width = yellowPct + "%";
+            document.getElementById('bar-yellow').innerText = yellowPct > 0 ? Math.round(yellowPct) + "%" : "";
+
+            // Populate Table
+            const tbody = document.querySelector('#words-table tbody');
+            tbody.innerHTML = '';
+            
+            data.words.forEach(word => {
+                const tr = document.createElement('tr');
+                let statusClass = '';
+                let statusText = '';
+
+                if (word.status === 'known') {
+                    statusClass = 'status-known';
+                    statusText = 'Known';
+                } else if (word.status === 'learning') {
+                    statusClass = 'status-learning';
+                    statusText = 'Failed/Learning';
+                } else {
+                    statusClass = 'status-new';
+                    statusText = 'Not Learned';
+                }
+
+                tr.innerHTML = `
+                    <td>${word.german}</td>
+                    <td>${word.english}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        loadStats();
+    </script>
+</body>
+</html>

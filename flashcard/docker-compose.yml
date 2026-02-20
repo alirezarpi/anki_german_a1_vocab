@@ -1,9 +1,14 @@
 services:
   flashcards:
-    build: .
+    image: alirezarpi/germany-learning-a1-flashcards:latest
     ports:
       - "8000:8000"
     volumes:
       - ./audio:/app/audio
       - "./Goethe Institute A1 Wordlist.txt:/app/Goethe Institute A1 Wordlist.txt"
       - ./data:/app/data
+    build:
+      context: .
+      dockerfile: Dockerfile
+      tags: 
+        - alirezarpi/germany-learning-a1-flashcards:latest

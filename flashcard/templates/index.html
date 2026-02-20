@@ -21,6 +21,9 @@
             --btn-wrong-text: white;
             --btn-correct-bg: #2ecc71;
             --btn-correct-text: white;
+            --input-bg: #fff;
+            --input-border: #ddd;
+            --input-text: #333;
         }
 
         [data-theme="dark"] {
@@ -36,6 +39,9 @@
             --btn-reveal-bg: #2980b9;
             --btn-wrong-bg: #c0392b;
             --btn-correct-bg: #27ae60;
+            --input-bg: #3d3d3d;
+            --input-border: #555;
+            --input-text: #fff;
         }
 
         body { 
@@ -72,6 +78,22 @@
         .btn-correct { background: var(--btn-correct-bg); color: var(--btn-correct-text); flex: 1; }
         .actions { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
         
+        /* Input Field */
+        .input-area { display: none; margin-top: 20px; }
+        input[type="text"] {
+            padding: 10px;
+            font-size: 1.2em;
+            border-radius: 5px;
+            border: 1px solid var(--input-border);
+            width: 80%;
+            margin-bottom: 10px;
+            background: var(--input-bg);
+            color: var(--input-text);
+        }
+        .feedback { margin-top: 10px; font-weight: bold; }
+        .feedback.correct { color: var(--btn-correct-bg); }
+        .feedback.incorrect { color: var(--btn-wrong-bg); }
+
         /* Loading state */
         .loading { opacity: 0.5; pointer-events: none; }
 
@@ -88,14 +110,32 @@
             cursor: pointer;
             font-size: 0.9em;
         }
+
+        .stats-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            border: 1px solid var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        /* Hidden class */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
+    <a href="/stats" class="stats-link">📊 Stats</a>
 
     <div class="card" id="card-container">
-        <div id="german" class="german">Loading...</div>
-        <div id="german-ex" class="example"></div>
+        <div id="german-container">
+            <div id="german" class="german">Loading...</div>
+            <div id="german-ex" class="example"></div>
+        </div>
         
         <button onclick="playAudio()" id="audio-btn" class="btn-audio">🔊 Play Sound</button>
         
@@ -108,7 +148,18 @@
             <p>Did you know it?</p>
             <div class="actions">
                 <button onclick="submit('wrong')" class="btn-wrong">No (Review)</button>
-                <button onclick="submit('correct')" class="btn-correct">Yes</button>
+                <button onclick="startChallenge()" class="btn-correct">Yes</button>
+            </div>
+        </div>
+
+        <div id="challenge-area" class="input-area">
+            <p>Type the German word:</p>
+            <input type="text" id="german-input" placeholder="Type here..." autocomplete="off">
+            <br>
+            <button onclick="checkSpelling()" class="btn-reveal">Check</button>
+            <div id="feedback" class="feedback"></div>
+            <div id="next-action" class="actions hidden">
+                <button onclick="finishCard()" class="btn-correct">Next Card</button>
             </div>
         </div>
     </div>
@@ -155,14 +206,29 @@
 
                 currentCard = data;
                 
+                // Reset UI elements
+                document.getElementById('german-container').classList.remove('hidden');
                 document.getElementById('german').innerText = currentCard.german;
                 document.getElementById('german-ex').innerText = currentCard.german_example || '';
                 document.getElementById('english').innerText = currentCard.english;
                 document.getElementById('english-ex').innerText = currentCard.english_example || '';
                 
-                // Reset UI
                 document.getElementById('answer-area').style.display = 'none';
+                document.getElementById('challenge-area').style.display = 'none';
                 document.getElementById('reveal-btn').style.display = 'inline-block';
+                
+                // Reset input and feedback
+                const inputEl = document.getElementById('german-input');
+                inputEl.value = '';
+                inputEl.disabled = false;
+                
+                const checkBtn = document.querySelector('#challenge-area button');
+                checkBtn.disabled = false;
+                checkBtn.style.display = 'inline-block';
+
+                document.getElementById('feedback').innerText = '';
+                document.getElementById('feedback').className = 'feedback';
+                document.getElementById('next-action').classList.add('hidden');
                 
                 // Hide audio button if no audio
                 document.getElementById('audio-btn').style.display = currentCard.audio_file ? 'inline-block' : 'none';
@@ -186,7 +252,61 @@
             document.getElementById('reveal-btn').style.display = 'none';
         }
 
+        function startChallenge() {
+            // Hide the German word and example
+            document.getElementById('german-container').classList.add('hidden');
+            // Hide the answer area buttons
+            document.getElementById('answer-area').style.display = 'none';
+            // Show the input field
+            document.getElementById('challenge-area').style.display = 'block';
+            document.getElementById('german-input').focus();
+        }
+
+        function checkSpelling() {
+            const inputEl = document.getElementById('german-input');
+            const checkBtn = document.querySelector('#challenge-area button');
+            
+            const input = inputEl.value.trim();
+            const correct = currentCard.german.trim();
+            const feedbackEl = document.getElementById('feedback');
+            
+            // Simple normalization: remove extra spaces
+            if (input.toLowerCase() === correct.toLowerCase()) {
+                feedbackEl.innerText = "Correct! " + correct;
+                feedbackEl.className = "feedback correct";
+                playAudio();
+                submitToBackend('correct');
+            } else {
+                feedbackEl.innerText = "Incorrect. Marked as failed. It was: " + correct;
+                feedbackEl.className = "feedback incorrect";
+                submitToBackend('wrong');
+            }
+
+            // Disable further edits to prevent cheating/overriding
+            inputEl.disabled = true;
+            checkBtn.disabled = true;
+            checkBtn.style.display = 'none';
+            
+            document.getElementById('next-action').classList.remove('hidden');
+            // Focus the next button so enter key works
+            document.querySelector('#next-action button').focus();
+        }
+
+        async function submitToBackend(result) {
+            if (!currentCard) return;
+            try {
+                await fetch(`/api/result/${currentCard.id}/${result}`, { method: 'POST' });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function finishCard() {
+            loadCard();
+        }
+
         async function submit(result) {
+            // This is only called for "No (Review)" button directly
             if (!currentCard) return;
             
             cardContainer.classList.add('loading');
@@ -199,6 +319,13 @@
                 cardContainer.classList.remove('loading');
             }
         }
+        
+        // Allow Enter key to submit spelling
+        document.getElementById('german-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkSpelling();
+            }
+        });
 
         // Initial load
         loadCard();
