@@ -136,7 +136,7 @@
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
 
     <div class="container">
-        <a href="/" class="back-btn">← Back to Flashcards</a>
+        <a href="." class="back-btn">← Back to Flashcards</a>
         <h1>Your Progress</h1>
 
         <div class="progress-container">
@@ -169,6 +169,11 @@
     </div>
 
     <script>
+        // Prefix for GitHub Pages or subpath deployment
+        const BASE_PATH = window.location.pathname.includes('/germany/learning/a1/vocab/') 
+            ? '/germany/learning/a1/vocab' 
+            : '';
+
         // Theme Logic
         function toggleTheme() {
             const html = document.documentElement;
@@ -189,7 +194,8 @@
         updateThemeButton(savedTheme);
 
         async function loadStats() {
-            const res = await fetch('/api/stats');
+            // Use BASE_PATH for API call
+            const res = await fetch(`${BASE_PATH}/api/stats`);
             const data = await res.json();
 
             // Update Progress Bar

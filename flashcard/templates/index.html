@@ -129,7 +129,7 @@
 </head>
 <body>
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
-    <a href="/stats" class="stats-link">📊 Stats</a>
+    <a href="stats" class="stats-link">📊 Stats</a>
 
     <div class="card" id="card-container">
         <div id="german-container">
@@ -165,6 +165,11 @@
     </div>
 
     <script>
+        // Prefix for GitHub Pages or subpath deployment
+        const BASE_PATH = window.location.pathname.includes('/germany/learning/a1/vocab/') 
+            ? '/germany/learning/a1/vocab' 
+            : '';
+
         let currentCard = null;
         const cardContainer = document.getElementById('card-container');
 
@@ -196,7 +201,8 @@
         async function loadCard() {
             cardContainer.classList.add('loading');
             try {
-                const res = await fetch('/api/card');
+                // Use BASE_PATH for API call
+                const res = await fetch(`${BASE_PATH}/api/card`);
                 const data = await res.json();
                 
                 if (data.error) {
@@ -242,7 +248,7 @@
 
         function playAudio() {
             if(currentCard && currentCard.audio_file) {
-                const audio = new Audio('/static/audio/' + currentCard.audio_file);
+                const audio = new Audio(`${BASE_PATH}/static/audio/` + currentCard.audio_file);
                 audio.play().catch(e => console.log("Audio play failed", e));
             }
         }
@@ -295,7 +301,7 @@
         async function submitToBackend(result) {
             if (!currentCard) return;
             try {
-                await fetch(`/api/result/${currentCard.id}/${result}`, { method: 'POST' });
+                await fetch(`${BASE_PATH}/api/result/${currentCard.id}/${result}`, { method: 'POST' });
             } catch (e) {
                 console.error(e);
             }
@@ -311,7 +317,7 @@
             
             cardContainer.classList.add('loading');
             try {
-                await fetch(`/api/result/${currentCard.id}/${result}`, { method: 'POST' });
+                await fetch(`${BASE_PATH}/api/result/${currentCard.id}/${result}`, { method: 'POST' });
                 loadCard();
             } catch (e) {
                 console.error(e);
