@@ -205,13 +205,13 @@
             const yellowPct = (data.new / total) * 100; // New -> Yellow
 
             document.getElementById('bar-green').style.width = greenPct + "%";
-            document.getElementById('bar-green').innerText = greenPct > 0 ? Math.round(greenPct) + "%" : "";
+            document.getElementById('bar-green').innerText = greenPct > 0 ? `${Math.round(greenPct)}% (${data.known})` : "";
             
             document.getElementById('bar-red').style.width = redPct + "%";
-            document.getElementById('bar-red').innerText = redPct > 0 ? Math.round(redPct) + "%" : "";
+            document.getElementById('bar-red').innerText = redPct > 0 ? `${Math.round(redPct)}% (${data.learning})` : "";
 
             document.getElementById('bar-yellow').style.width = yellowPct + "%";
-            document.getElementById('bar-yellow').innerText = yellowPct > 0 ? Math.round(yellowPct) + "%" : "";
+            document.getElementById('bar-yellow').innerText = yellowPct > 0 ? `${Math.round(yellowPct)}% (${data.new})` : "";
 
             // Populate Table
             const tbody = document.querySelector('#words-table tbody');
