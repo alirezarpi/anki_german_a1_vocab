@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>German A1 Test</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --border-color: #eee;
+            --btn-option-bg: #f8f9fa;
+            --btn-option-hover: #e9ecef;
+            --btn-correct-bg: #2ecc71;
+            --btn-correct-text: white;
+            --btn-wrong-bg: #e74c3c;
+            --btn-wrong-text: white;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --border-color: #404040;
+            --btn-option-bg: #3d3d3d;
+            --btn-option-hover: #4d4d4d;
+            --btn-correct-bg: #27ae60;
+            --btn-wrong-bg: #c0392b;
+        }
+
+        body {
+            font-family: sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        h1 { margin-top: 0; }
+
+        .progress {
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .question-box {
+            margin: 30px 0;
+        }
+
+        .german-word {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+        }
+
+        .option-btn {
+            padding: 15px;
+            font-size: 1.1em;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            background: var(--btn-option-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover:not(:disabled) {
+            background: var(--btn-option-hover);
+            transform: translateY(-2px);
+        }
+
+        .option-btn:disabled {
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        .option-btn.correct {
+            background: var(--btn-correct-bg);
+            color: var(--btn-correct-text);
+            border-color: var(--btn-correct-bg);
+        }
+
+        .option-btn.wrong {
+            background: var(--btn-wrong-bg);
+            color: var(--btn-wrong-text);
+            border-color: var(--btn-wrong-bg);
+        }
+
+        .result-box {
+            display: none;
+        }
+
+        .score-display {
+            font-size: 3em;
+            font-weight: bold;
+            margin: 20px 0;
+            color: var(--btn-correct-bg);
+        }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: bold;
+            border: 1px solid var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            align-self: flex-start;
+        }
+        
+        .nav-header {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .retry-btn {
+            padding: 12px 24px;
+            background: var(--btn-reveal-bg, #3498db);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <a href="." class="back-btn">← Back</a>
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
+    </div>
+
+    <div class="container" id="quiz-container">
+        <div id="loading">Loading test...</div>
+        
+        <div id="quiz-content" style="display: none;">
+            <div class="progress">Question <span id="current-q">1</span> / <span id="total-q">10</span></div>
+            
+            <div class="question-box">
+                <div class="german-word" id="question-word"></div>
+                <div class="options-grid" id="options-container">
+                    <!-- Options will be inserted here -->
+                </div>
+            </div>
+        </div>
+
+        <div id="result-box" class="result-box">
+            <h1>Test Complete!</h1>
+            <div class="score-display" id="final-score"></div>
+            <p id="feedback-msg"></p>
+            <button class="retry-btn" onclick="location.reload()">Take Another Test</button>
+        </div>
+    </div>
+
+    <script>
+        // Prefix for GitHub Pages or subpath deployment
+        const BASE_PATH = window.location.pathname.includes('/germany/learning/a1/vocab/') 
+            ? '/germany/learning/a1/vocab' 
+            : '';
+
+        // Theme Logic
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const btn = document.getElementById('theme-btn');
+            btn.innerText = theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+        }
+
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
+        // Quiz Logic
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let isAnswering = false;
+
+        async function initQuiz() {
+            try {
+                const res = await fetch(`${BASE_PATH}/api/test/generate`);
+                const data = await res.json();
+
+                if (data.error) {
+                    document.getElementById('loading').innerHTML = `<p>${data.error}</p><a href="." class="back-btn">Go Learn</a>`;
+                    return;
+                }
+
+                questions = data.questions;
+                document.getElementById('total-q').innerText = questions.length;
+                
+                if (questions.length === 0) {
+                    document.getElementById('loading').innerHTML = `<p>No learned words found! Go study some cards first.</p><a href="." class="back-btn">Go Learn</a>`;
+                    return;
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('quiz-content').style.display = 'block';
+                showQuestion();
+            } catch (e) {
+                console.error(e);
+                document.getElementById('loading').innerText = "Error loading test.";
+            }
+        }
+
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            document.getElementById('current-q').innerText = currentQuestionIndex + 1;
+            document.getElementById('question-word').innerText = q.german;
+            
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+            
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = opt.text;
+                btn.onclick = () => handleAnswer(opt.is_correct, btn, q.options);
+                container.appendChild(btn);
+            });
+            
+            isAnswering = true;
+        }
+
+        function handleAnswer(isCorrect, btn, options) {
+            if (!isAnswering) return;
+            isAnswering = false;
+
+            const buttons = document.querySelectorAll('.option-btn');
+            
+            if (isCorrect) {
+                btn.classList.add('correct');
+                score++;
+            } else {
+                btn.classList.add('wrong');
+                // Highlight the correct one
+                buttons.forEach((b, idx) => {
+                    if (options[idx].is_correct) {
+                        b.classList.add('correct');
+                    }
+                });
+            }
+
+            // Disable all buttons
+            buttons.forEach(b => b.disabled = true);
+
+            // Wait and go next
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < questions.length) {
+                    showQuestion();
+                } else {
+                    showResults();
+                }
+            }, 1500);
+        }
+
+        function showResults() {
+            document.getElementById('quiz-content').style.display = 'none';
+            const resultBox = document.getElementById('result-box');
+            resultBox.style.display = 'block';
+            
+            const percentage = Math.round((score / questions.length) * 100);
+            document.getElementById('final-score').innerText = `${score} / ${questions.length}`;
+            
+            let msg = "";
+            if (percentage === 100) msg = "Perfect! 🎉";
+            else if (percentage >= 80) msg = "Great job! 👏";
+            else if (percentage >= 60) msg = "Good effort! 👍";
+            else msg = "Keep practicing! 💪";
+            
+            document.getElementById('feedback-msg').innerText = msg;
+        }
+
+        initQuiz();
+    </script>
+</body>
+</html>

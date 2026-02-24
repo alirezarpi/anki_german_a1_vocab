@@ -30,6 +30,59 @@ async def read_root(request: Request):
 async def read_stats(request: Request):
     return templates.TemplateResponse("stats.html", {"request": request})
 
+@app.get("/test", response_class=HTMLResponse)
+async def read_test(request: Request):
+    return templates.TemplateResponse("test.html", {"request": request})
+
+@app.get("/api/test/generate")
+def generate_test():
+    conn = get_db()
+    c = conn.cursor()
+    
+    # Get learned cards (box > 1)
+    c.execute("SELECT * FROM cards WHERE box > 1")
+    learned_cards = c.fetchall()
+    
+    # Get all english meanings for distractors
+    c.execute("SELECT english FROM cards")
+    all_meanings = [r['english'] for r in c.fetchall()]
+    
+    conn.close()
+    
+    if not learned_cards:
+        return {"error": "No learned words yet! Learn some words first."}
+        
+    # Select up to 10 random learned cards
+    num_questions = min(len(learned_cards), 10)
+    selected_cards = random.sample(learned_cards, num_questions)
+    
+    quiz = []
+    for card in selected_cards:
+        correct_answer = card['english']
+        
+        # Pick 3 distractors
+        # Filter out the correct answer from potential distractors
+        potential_distractors = [m for m in all_meanings if m != correct_answer]
+        # If we don't have enough distractors (unlikely unless DB is tiny), handle it
+        if len(potential_distractors) < 3:
+            distractors = potential_distractors
+        else:
+            distractors = random.sample(potential_distractors, 3)
+            
+        options = [{'text': correct_answer, 'is_correct': True}]
+        for d in distractors:
+            options.append({'text': d, 'is_correct': False})
+            
+        random.shuffle(options)
+        
+        quiz.append({
+            "id": card['id'],
+            "german": card['german'],
+            "options": options
+        })
+        
+    return {"questions": quiz}
+
 @app.get("/api/stats")
 def get_stats():
     conn = get_db()
