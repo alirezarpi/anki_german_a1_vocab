@@ -137,12 +137,42 @@
         
         /* Hidden class */
         .hidden { display: none !important; }
+
+        /* Checkbox for manual mode */
+        .manual-mode-container {
+            position: absolute;
+            top: 20px;
+            left: 200px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--text-primary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .manual-mode-container input {
+            cursor: pointer;
+        }
+        
+        .manual-mode-container label {
+            cursor: pointer;
+            user-select: none;
+        }
     </style>
 </head>
 <body>
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
     <a href="stats" class="stats-link">📊 Stats</a>
     <a href="test" class="test-link">📝 Test</a>
+
+    <div class="manual-mode-container">
+        <input type="checkbox" id="manual-mode" onchange="toggleManualMode()">
+        <label for="manual-mode">Write on Paper</label>
+    </div>
 
     <div class="card" id="card-container">
         <div id="german-container">
@@ -211,6 +241,15 @@
         document.documentElement.setAttribute('data-theme', savedTheme);
         updateThemeButton(savedTheme);
 
+        // Initialize Manual Mode
+        const savedManualMode = localStorage.getItem('manualMode') === 'true';
+        document.getElementById('manual-mode').checked = savedManualMode;
+
+        function toggleManualMode() {
+            const isManual = document.getElementById('manual-mode').checked;
+            localStorage.setItem('manualMode', isManual);
+        }
+
         async function loadCard() {
             cardContainer.classList.add('loading');
             try {
@@ -272,13 +311,23 @@
         }
 
         function startChallenge() {
-            // Hide the German word and example
-            document.getElementById('german-container').classList.add('hidden');
-            // Hide the answer area buttons
-            document.getElementById('answer-area').style.display = 'none';
-            // Show the input field
-            document.getElementById('challenge-area').style.display = 'block';
-            document.getElementById('german-input').focus();
+            const isManual = document.getElementById('manual-mode').checked;
+            
+            if (isManual) {
+                // Manual Mode: Just mark as correct and go to next
+                playAudio();
+                submitToBackend('correct');
+                loadCard();
+            } else {
+                // Typing Mode
+                // Hide the German word and example
+                document.getElementById('german-container').classList.add('hidden');
+                // Hide the answer area buttons
+                document.getElementById('answer-area').style.display = 'none';
+                // Show the input field
+                document.getElementById('challenge-area').style.display = 'block';
+                document.getElementById('german-input').focus();
+            }
         }
 
         function checkSpelling() {
